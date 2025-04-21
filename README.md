@@ -1,4 +1,4 @@
-# COMP 2012 PA2 - Trading Bot Simulation
+# Trading Bot Simulation
 
 ## Overview
 
