@@ -1,0 +1,165 @@
+# Trading Bot Simulation
+
+## Overview
+
+This project implements a trading bot that simulates different trading strategies on historical market data. It includes the implementation of several strategies, such as Mean Reversion, Trend Following, and Weighted Trend Following. The project allows for backtesting these strategies to determine their profitability and compare their performance under different market conditions.
+
+## Project Structure
+
+The project is structured as follows:
+
+*   `Market.h`: Defines the `Market` class, which simulates market behavior and stores price data.
+*   `Market.cpp`: Implements the `Market` class.
+*   `Strategy.h`: Defines the base `Strategy` class and the `Action` enum.
+*   `Strategy.cpp`: Implements the base `Strategy` class, including the `calculateMovingAverage` method.
+*   `MeanReversionStrategy.h`: Defines the `MeanReversionStrategy` class, which implements a mean reversion trading strategy.
+*   `MeanReversionStrategy.cpp`: Implements the `MeanReversionStrategy` class.
+*   `TrendFollowingStrategy.h`: Defines the `TrendFollowingStrategy` class, which implements a trend-following trading strategy.
+*   `TrendFollowingStrategy.cpp`: Implements the `TrendFollowingStrategy` class.
+*   `WeightedTrendFollowingStrategy.h`: Defines the `WeightedTrendFollowingStrategy` class, which implements a weighted trend-following trading strategy.
+*   `WeightedTrendFollowingStrategy.cpp`: Implements the `WeightedTrendFollowingStrategy` class.
+*   `TradingBot.h`: Defines the `TradingBot` class, which manages the trading strategies and runs the simulation.
+*   `TradingBot.cpp`: Implements the `TradingBot` class.
+*   `Utils.h`: Provides utility functions, such as `roundToDecimals`.
+*   `main.cpp`: Contains the main function, which sets up the simulation and runs the test cases.
+*   `data/`: Contains the market data files used for simulation.
+
+## Inheritance Structure
+
+The project utilizes an inheritance structure for the trading strategies:
+
+*   `Strategy` (Base Class): Defines the common interface for all trading strategies.
+    *   `MeanReversionStrategy` (Derived Class): Implements a mean reversion strategy.
+    *   `TrendFollowingStrategy` (Derived Class): Implements a trend-following strategy.
+    *   `WeightedTrendFollowingStrategy` (Derived Class): Implements a weighted trend-following strategy.
+
+## Key Function Implementations
+
+### `Market::simulate()`
+
+This function simulates the market prices for a given number of trading days based on the initial price, volatility, and expected yearly return. It uses a geometric Brownian motion model to generate the price movements.
+
+```cpp
+// filepath: Market.cpp
+void Market::simulate()
+{
+    *prices[0] = roundToDecimals(initialPrice, 3);
+    double deltaT = 1.0 / TRADING_DAYS_PER_YEAR;
+    for (int i = 1; i < numTradingDays; i++)
+    {
+        double z = generateZ(seed);
+        double drift = (expectedYearlyReturn - 0.5 * volatility * volatility) * deltaT;
+        double diffusion = volatility * sqrt(deltaT) * z;
+        double logReturn = drift + diffusion;
+        *prices[i] = roundToDecimals(*prices[i - 1] * exp(logReturn), 3);
+    }
+}
+```
+
+The core of the simulation lies in the loop, where each day's price is calculated based on the previous day's price and a random component derived from a normal distribution. The `generateZ()` function (not shown here, but present in `Market.cpp`) provides the random sample from a standard normal distribution.
+
+### `Strategy::calculateMovingAverage()`
+
+This function calculates the moving average of the market prices over a specified window. It iterates through the prices within the window and calculates the average.
+
+```cpp
+// filepath: Strategy.cpp
+double Strategy::calculateMovingAverage(Market *market, int index, int window) const
+{
+    if (market == nullptr)
+    {
+        return 0.0;
+    }
+
+    if (index < 0 || window <= 0)
+    {
+        return market->getPrice(max(0, index));
+    }
+
+    double sum = 0.0;
+    int startIdx = max(index - window + 1, 0);
+    int count = 0;
+
+    for (int i = startIdx; i <= index; i++)
+    {
+        sum += market->getPrice(i);
+        count++;
+    }
+
+    return count > 0 ? sum / count : market->getPrice(index);
+}
+```
+
+This function provides a basic implementation of moving average calculation, which is a fundamental component of many trading strategies.
+
+### `MeanReversionStrategy::decideAction()`
+
+This function determines the trading action (BUY, SELL, or HOLD) based on the current market price and the moving average. It compares the current price to the moving average, considering a threshold.
+
+```cpp
+// filepath: MeanReversionStrategy.cpp
+Action MeanReversionStrategy::decideAction(Market *market, int index, double currentHolding) const
+{
+    double movingAvg = calculateMovingAverage(market, index, window);
+    double currentPrice = market->getPrice(index);
+
+    double thresholdPercent = threshold / 100.0;
+
+    if (currentHolding == 0.0)
+    {
+        if (currentPrice < movingAvg * (1.0 - thresholdPercent))
+        {
+            return BUY;
+        }
+    }
+    else if (currentHolding == 1.0)
+    {
+        if (currentPrice > movingAvg * (1.0 + thresholdPercent))
+        {
+            return SELL;
+        }
+    }
+
+    return HOLD;
+}
+```
+
+This function encapsulates the logic of a mean reversion strategy, which aims to profit from price fluctuations around the moving average.
+
+## Usage
+
+1.  **Build the project:** Use a C++ compiler (e.g., g++) to compile the source files. For example:
+
+    ```bash
+    g++ -std=c++11 main.cpp Market.cpp Strategy.cpp MeanReversionStrategy.cpp TrendFollowingStrategy.cpp WeightedTrendFollowingStrategy.cpp TradingBot.cpp Utils.cpp -o trading_bot
+    ```
+2.  **Run the executable:** Execute the compiled program.
+
+    ```bash
+    ./trading_bot
+    ```
+3.  **Input test case number:** The program will prompt you to enter a test case number (0-5). Each test case tests different functionalities of the program.
+
+## Test Cases
+
+*   **Case 0:** Generates basic testing market data files (bullish/bearish, low/high volatility). *Note: This case is for data generation and doesn't perform a simulation.*
+*   **Case 1:** Tests the functionality of the `Market` class by simulating a market and printing the prices for each day.
+*   **Case 2:** Tests the `Market` class's simulation and file loading capabilities.
+*   **Case 3:** Tests the `Strategy` and `TradingBot` classes with a set of pre-defined strategies on bullish market data.
+*   **Case 4:** Tests the strategy generation functions and runs a simulation on bullish market data.
+*   **Case 5:** Tests the strategy generation functions and runs a simulation on bearish market data.
+
+## Dependencies
+
+*   C++ compiler (g++)
+*   Standard C++ library
+
+## Notes
+
+*   The `TRADING_DAYS_PER_YEAR` constant is defined in `Strategy.h`.
+*   Market data files are stored in the `data/` directory. Ensure these files are present before running simulations (or run test case 0 to generate them).
+*   The `Utils.h` file provides utility functions for rounding numbers.
+
+## Author
+
+Shaheer
