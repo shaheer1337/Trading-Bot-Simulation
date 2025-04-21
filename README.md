@@ -1,4 +1,4 @@
-# Trading Bot Simulation
+# COMP 2012 PA2 - Trading Bot Simulation
 
 ## Overview
 
@@ -41,22 +41,28 @@ This function simulates the market prices for a given number of trading days bas
 
 ```cpp
 // filepath: Market.cpp
-void Market::simulate()
+void Market::simulate() 
 {
-    *prices[0] = roundToDecimals(initialPrice, 3);
-    double deltaT = 1.0 / TRADING_DAYS_PER_YEAR;
-    for (int i = 1; i < numTradingDays; i++)
-    {
-        double z = generateZ(seed);
-        double drift = (expectedYearlyReturn - 0.5 * volatility * volatility) * deltaT;
-        double diffusion = volatility * sqrt(deltaT) * z;
-        double logReturn = drift + diffusion;
-        *prices[i] = roundToDecimals(*prices[i - 1] * exp(logReturn), 3);
+    *prices[0] = roundToDecimals(initialPrice,3);
+    double deltaT= 1.0/TRADING_DAYS_PER_YEAR;
+    for(int i = 1; i < numTradingDays; i++){
+        double Z =generateZ(seed);
+        *prices[i] =  roundToDecimals(*prices[i-1]*exp((expectedYearlyReturn-0.5*(volatility*volatility))*deltaT+ (volatility*sqrt(deltaT)*Z)),3);
     }
 }
 ```
 
-The core of the simulation lies in the loop, where each day's price is calculated based on the previous day's price and a random component derived from a normal distribution. The `generateZ()` function (not shown here, but present in `Market.cpp`) provides the random sample from a standard normal distribution.
+The core of the simulation lies in the loop, where each day's price is calculated based on the previous day's price and a random component derived from a normal distribution. The `generateZ()` function (defined in `Market.cpp`) provides the random sample from a standard normal distribution. The price for each day is calculated using the following formula:
+
+*Price(t) = Price(t-1) * exp((drift - 0.5 * volatility^2) * deltaT + volatility * sqrt(deltaT) * Z)*
+
+Where:
+
+*   `Price(t)` is the price at time t.
+*   `drift` is the expected yearly return.
+*   `volatility` is the volatility of the market.
+*   `deltaT` is the time step (1/TRADING\_DAYS\_PER\_YEAR).
+*   `Z` is a random number from a standard normal distribution.
 
 ### `Strategy::calculateMovingAverage()`
 
